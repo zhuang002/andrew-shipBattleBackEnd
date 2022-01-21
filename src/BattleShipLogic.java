@@ -28,6 +28,7 @@ public class BattleShipLogic {
 	
 	HashMap<ShipTypes, Integer> shipLengths = new HashMap<>();
 	
+	ArrayList<ArrayList<ShipPlacement>> rivalShipPlacementOptions = new ArrayList<>();
 	
 	public BattleShipLogic() {
 		
@@ -36,9 +37,65 @@ public class BattleShipLogic {
 		shipLengths.put(ShipTypes.Cruiser, 3);
 		shipLengths.put(ShipTypes.Submarine, 3);
 		shipLengths.put(ShipTypes.Destroyer, 2);
+		
+		initializeRivalShipPlacement();
+		
+		
+		
 		clear();
 	}
 	
+	private void initializeRivalShipPlacement() {
+		// TODO Auto-generated method stub
+		ArrayList<ShipPlacement> option = new ArrayList<>();
+		option.add(new ShipPlacement(ShipTypes.Carrier, 0, 0, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.BattleShip, 2, 1, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.Cruiser, 4, 2, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.Submarine, 6, 2, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.Destroyer, 8, 3, Orientation.Horizontal));
+		rivalShipPlacementOptions.add(option);
+		
+		option = new ArrayList<>();
+		option.add(new ShipPlacement(ShipTypes.Carrier, 1, 2, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.BattleShip, 5, 1, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Cruiser, 4, 0, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Submarine, 6, 2, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Destroyer, 1, 1, Orientation.Vertical));
+		rivalShipPlacementOptions.add(option);
+		
+		option = new ArrayList<>();
+		option.add(new ShipPlacement(ShipTypes.Carrier, 0, 2, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.BattleShip, 2, 0, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Cruiser, 4, 2, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.Submarine, 4, 6, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Destroyer, 2, 7, Orientation.Horizontal));
+		rivalShipPlacementOptions.add(option);
+		
+		option = new ArrayList<>();
+		option.add(new ShipPlacement(ShipTypes.Carrier, 0, 2, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.BattleShip, 6, 2, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Cruiser, 6, 4, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Submarine, 1, 6, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Destroyer, 6, 7, Orientation.Horizontal));
+		rivalShipPlacementOptions.add(option);
+		
+		option = new ArrayList<>();
+		option.add(new ShipPlacement(ShipTypes.Carrier, 2, 2, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.BattleShip, 6, 6, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.Cruiser, 1, 7, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Submarine, 6, 4, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Destroyer, 0, 4, Orientation.Horizontal));
+		rivalShipPlacementOptions.add(option);
+		
+		option = new ArrayList<>();
+		option.add(new ShipPlacement(ShipTypes.Carrier, 0, 7, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.BattleShip, 7, 3, Orientation.Horizontal));
+		option.add(new ShipPlacement(ShipTypes.Cruiser, 3, 4, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Submarine, 6, 7, Orientation.Vertical));
+		option.add(new ShipPlacement(ShipTypes.Destroyer, 8, 3, Orientation.Horizontal));
+		rivalShipPlacementOptions.add(option);
+	}
+
 	/***
 	 * Clear all internal data
 	 */
@@ -104,7 +161,6 @@ public class BattleShipLogic {
 		// TODO Auto-generated method stub
 		if (rand.nextInt(2) == 1) {
 			rivalFire();
-			controller.updateRivalField(myGrid);
 		}
 	}
 
@@ -120,16 +176,19 @@ public class BattleShipLogic {
 			y = index % 10;
 		} 
 		
-		fire(myGrid, myShips, myShipHits, myShipCoordinates, x, y);
+		boolean gameOver = fire(myGrid, myShips, myShipHits, myShipCoordinates, x, y);
+		controller.updateMyField(myGrid);
 		
-		
-		
+		if (gameOver) {
+			controller.gameFinished(1);
+		}
 	}
 
 
-	private void fire(GridStatus[][] grid, HashMap<Coordinate, ShipTypes> ships,
+	private boolean fire(GridStatus[][] grid, HashMap<Coordinate, ShipTypes> ships,
 			HashMap<ShipTypes, Integer> shipHits, HashMap<ShipTypes, List<Coordinate>> shipCoordinates, int x,  int y) {
 		// TODO Auto-generated method stub
+		
 		if (grid[x][y] == GridStatus.Default) {
 			grid[x][y] = GridStatus.Miss;
 		} else {
@@ -137,14 +196,23 @@ public class BattleShipLogic {
 			ShipTypes ship = ships.get(new Coordinate(x,y));
 			int hits = shipHits.get(ship);
 			hits++;
-			myShipHits.put(ship, hits);
+			shipHits.put(ship, hits);
 			if (hits>=shipLengths.get(ship)) { // this ship should be sunk
 				List<Coordinate> coords = shipCoordinates.get(ship);
 				for (Coordinate coordinate: coords) {
-					myGrid[coordinate.x][coordinate.y] = GridStatus.Sunk;
+					grid[coordinate.x][coordinate.y] = GridStatus.Sunk;
 				}
+				// check if all ships are sunk
+				
+				for (ShipTypes st:shipHits.keySet()) {
+					if (shipHits.get(st)<shipLengths.get(st)) {
+						return false;
+					}
+				}
+				return true;
 			}
 		}
+		return false;
 	}
 
 
@@ -179,55 +247,47 @@ public class BattleShipLogic {
 			HashMap<ShipTypes, List<Coordinate>> shipCoordinates) throws InvalidShipPlacementException {
 		// TODO Auto-generated method stub
 		
-		ShipTypes ship = getShipTypeFromSName(shipPlace.shipName);
+		ShipTypes ship = shipPlace.shipName;
 		int shipLength = shipLengths.get(ship);
 		int x=0;
 		int y=0;
-		if (shipPlace.orientation == Orientation.Horizontal) {
-			
-			for (int i=0;i<shipLength;i++) {
+		
+		for (int i=0;i<shipLength;i++) {
+			if (shipPlace.orientation == Orientation.Horizontal) {
 				x = shipPlace.x;
 				y = shipPlace.y+i;
-				
-			}
-		} else {
-			for (int i=0;i<shipLength;i++) {
+			} else {
 				x = shipPlace.x +i;
 				y = shipPlace.y;
 			}
+			
+			if (x>=0 && y>=0 && x<10 && y<10 && grid[x][y] == GridStatus.Default) {
+				grid[x][y] = GridStatus.PartOfShip;
+				Coordinate coord =new Coordinate(x,y);
+				ships.put(coord , ship);
+				List<Coordinate> coordinates = null;
+				if (!shipCoordinates.containsKey(ship)) {
+					coordinates = new ArrayList<Coordinate>();
+					shipCoordinates.put(ship, coordinates);
+				}
+				
+				coordinates = shipCoordinates.get(ship);
+				if (coordinates == null) {
+					coordinates = new ArrayList<Coordinate>();
+					shipCoordinates.put(ship, coordinates);
+				}
+				
+				coordinates.add(coord);
+			} else {
+				throw new InvalidShipPlacementException();
+			}
 		}
 		
-		if (x>=0 && y>=0 && x<10 && y<10 && grid[x][y] == GridStatus.Default) {
-			grid[x][y] = GridStatus.PartOfShip;
-			Coordinate coord =new Coordinate(x,y);
-			ships.put(coord , ship);
-			List<Coordinate> coordinates = null;
-			if (!shipCoordinates.containsKey(ship)) {
-				coordinates = new ArrayList<Coordinate>();
-				shipCoordinates.put(ship, coordinates);
-			}
-			
-			coordinates = shipCoordinates.get(ship);
-			if (coordinates == null) {
-				coordinates = new ArrayList<Coordinate>();
-				shipCoordinates.put(ship, coordinates);
-			}
-			
-			coordinates.add(coord);
-		} else {
-			throw new InvalidShipPlacementException();
-		}
+		
+		
 	}
 
-	private ShipTypes getShipTypeFromSName(String shipName) {
-		// TODO Auto-generated method stub
-		if (shipName.equals("Carrier")) return ShipTypes.Carrier;
-		if (shipName.equals("BattleShip")) return ShipTypes.BattleShip;
-		if (shipName.equals("Cruiser")) return ShipTypes.Cruiser;
-		if (shipName.equals("Submarine")) return ShipTypes.Submarine;
-		if (shipName.equals("Destroyer")) return ShipTypes.Destroyer;
-		return null;
-	}
+	
 
 	/*public GridStatus[][] getGridData(String string) {
 		// TODO Auto-generated method stub
@@ -250,7 +310,13 @@ public class BattleShipLogic {
 	 */
 	public void fire(int x, int y) {
 		// TODO Auto-generated method stub
-		fire(rivalGrid, rivalShips, rivalShipHits, rivalShipCoordinates, x, y);
+		boolean gameOver = fire(rivalGrid, rivalShips, rivalShipHits, rivalShipCoordinates, x, y);
+		controller.updateRivalField(rivalGrid);
+		if (gameOver) {
+			controller.gameFinished(0);
+		} else {
+			rivalFire();
+		}
 	}
 
 	/***
@@ -268,7 +334,8 @@ public class BattleShipLogic {
 	// auto placement for rival ships. make sure the placement is valid.
 	private List<ShipPlacement> randomShipPlacementForRival() {
 		// TODO Auto-generated method stub
-		return null;
+		int i = rand.nextInt(this.rivalShipPlacementOptions.size());
+		return this.rivalShipPlacementOptions.get(i);
 	}
 
 	/***
